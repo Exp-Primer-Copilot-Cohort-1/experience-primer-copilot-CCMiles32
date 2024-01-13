@@ -1,39 +1,61 @@
-//create web server
-const express = require("express");
-const router = express.Router();
-const { Comment } = require("../models/Comment");
+// Create web server
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const port = 3000;
 
-//=================================
-//             comment
-//=================================
+// Body parser
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-//save comment
-router.post("/saveComment", (req, res) => {
-  //save comment info into DB
-  const comment = new Comment(req.body);
-  comment.save((err, comment) => {
-    //save to DB
-    if (err) return res.json({ success: false, err });
-    //if no error, save to DB
-    Comment.find({ _id: comment._id }) //find the comment we saved
-      .populate("writer") //populate the writer field
-      .exec((err, result) => {
-        //execute the query
-        if (err) return res.json({ success: false, err });
-        return res.status(200).json({ success: true, result });
-      });
-  });
+// Import the comments.js
+const comments = require('./comments.js');
+
+// Get all comments
+app.get('/comments', (req, res) => {
+    res.json(comments);
 });
 
-//get comments
-router.post("/getComments", (req, res) => {
-  Comment.find({ postId: req.body.videoId }) //find the comment we saved
-    .populate("writer") //populate the writer field
-    .exec((err, comments) => {
-      //execute the query
-      if (err) return res.status(400).send(err);
-      return res.status(200).json({ success: true, comments });
-    });
+// Get comments by id
+app.get('/comments/:id', (req, res) => {
+    const comment = comments.find(comment => comment.id === parseInt(req.params.id));
+    res.json(comment);
 });
 
-module.exports = router;
+// Post comments
+app.post('/comments', (req, res) => {
+    const comment = {
+        id: comments.length + 1,
+        name: req.body.name,
+        comment: req.body.comment
+    };
+
+    comments.push(comment);
+
+    res.json(comment);
+});
+
+// Put comments
+app.put('/comments/:id', (req, res) => {
+    const comment = comments.find(comment => comment.id === parseInt(req.params.id));
+
+    comment.name = req.body.name;
+    comment.comment = req.body.comment;
+
+    res.json(comment);
+});
+
+// Delete comments
+app.delete('/comments/:id', (req, res) => {
+    const comment = comments.find(comment => comment.id === parseInt(req.params.id));
+
+    const index = comments.indexOf(comment);
+    comments.splice(index, 1);
+
+    res.json(comment);
+});
+
+// Listen port
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
